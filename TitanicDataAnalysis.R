@@ -187,3 +187,186 @@ ggplot(data.combined[1:891,], aes(x = family.size, fill = Survived)) +
   ylab("Total Count") +
   ylim(0,300) +
   labs(fill = "Survived")
+
+# Take a look at ticket variable
+str(data.combined$Ticket)
+
+# Based on large number of factors, this variable isnt likely factorable and should be made into string.
+data.combined$Ticket <- as.character(data.combined$Ticket)
+data.combined$Ticket[1:20]
+
+# There's no immedietly apparent structure in the data, let's see if we can find some.
+# We'll start with taking a look at just the first char for each
+ticket.first.char <- ifelse(data.combined$Ticket == "", " ", substr(data.combined$Ticket, 1, 1))
+unique(ticket.first.char)
+
+# Ok, we can make a factor for analysis purposes and visualize
+data.combined$ticket.first.char <- as.factor(ticket.first.char)
+
+# First, a high level plot of the data
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = Survived)) +
+  geom_bar() +
+  ggtitle("Survivability by ticket.first.char") +
+  xlab("ticket.first.char") +
+  ylab("Total Count") +
+  ylim(0,350) +
+  labs(fill = "Survived")
+
+#Ticket seemslike it might be predicative, drill down a bit
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = Survived)) +
+  geom_bar() +
+  facet_wrap(~Pclass) +
+  ggtitle("Pclass") +
+  xlab("ticket.first.char") +
+  ylab("Total Count") +
+  ylim(0,150) +
+  labs(fill = "Survived")
+
+# Lastly, see if there is a pattern when using combination of Pclass and title
+ggplot(data.combined[1:891,], aes(x = ticket.first.char, fill = Survived)) +
+  geom_bar() +
+  facet_wrap(~Pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("ticket.first.char") +
+  ylab("Total Count") +
+  ylim(0,200) +
+  labs(fill = "Survived")
+
+# Next up - the fares Titanic passengers paid
+summary(data.combined$Fare)
+length(unique(data.combined$Fare))
+
+#Cant make fare a factor, treat as numeric and visualize with histogram
+ggplot(data.combined, aes(x = Fare)) +
+  geom_histogram(binwidth = 5) +
+  ggtitle("Combined Fare Distribution") +
+  xlab("Fare") +
+  ylab("Total Count") +
+  ylim(0,200)
+
+# Let's check to see if fare has predicative power
+ggplot(data.combined[1:891,], aes(x = Fare, fill = Survived)) +
+  geom_histogram(binwidth = 5) +
+  facet_wrap(~Pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("Fare") +
+  ylab("Total Count") +
+  ylim(0,50) +
+  labs(fill = "Survived")
+
+#Analysis of the cabin variable
+str(data.combined$Cabin)
+
+#Cabin really isnt a factor. make a string and then display first 100
+data.combined$Cabin <- as.character(data.combined$Cabin)
+data.combined$Cabin[1:100]
+
+#Replace empty cabins with "U"
+data.combined[which(data.combined$Cabin == ""), "Cabin"] <- "U"
+data.combined$Cabin[1:100]
+
+#Take a look at just the first char as a factor
+cabin.first.char <- as.factor(substr(data.combined$Cabin,1,1))
+str(cabin.first.char)
+levels(cabin.first.char)
+
+#Add to combined data set and plot
+data.combined$cabin.first.char <- cabin.first.char
+
+#High level plot
+ggplot(data.combined[1:891,], aes(x = cabin.first.char, fill = Survived)) +
+  geom_bar() +
+  ggtitle("Survivability by cabin.first.char") +
+  xlab("cabin.first.char") +
+  ylab("Total Count") +
+  ylim(0,750) +
+  labs(fill = "Survived")
+
+#Could have some predicative power, drill in
+ggplot(data.combined[1:891,], aes(x = cabin.first.char, fill = Survived)) +
+  geom_bar() +
+  facet_wrap(~Pclass) +
+  ggtitle("Survivability by cabin.first.char") +
+  xlab("Pclass") +
+  ylab("Total Count") +
+  ylim(0,500) +
+  labs(fill = "Survived")
+
+#Does this feature improve upon Pclass + title?
+ggplot(data.combined[1:891,], aes(x = cabin.first.char, fill = Survived)) +
+  geom_bar() +
+  facet_wrap(~Pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("cabin.first.char") +
+  ylab("Total Count") +
+  ylim(0,500) +
+  labs(fill = "Survived")
+
+#What about folks with multiple cabins?
+data.combined$cabin.multiple <- as.factor(ifelse(str_detect(data.combined$Cabin, ""), "Y", "N"))
+
+ggplot(data.combined[1:891,], aes(x = cabin.multiple, fill = Survived)) +
+  geom_bar() +
+  facet_wrap(~Pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("cabin.multiple") +
+  ylab("Total Count") +
+  ylim(0,350) +
+  labs(fill = "Survived")
+
+#Does survivability depend on where you got onboard the Titanic?
+str(data.combined$Embarked)
+levels(data.combined$Embarked)
+
+#Plot for Analysis
+ggplot(data.combined[1:891,], aes(x = Embarked, fill= Survived))+
+  geom_bar() +
+  facet_wrap(~Pclass + title) +
+  ggtitle("Pclass, Title") +
+  xlab("Embarked") +
+  ylab("Total Count") +
+  ylim(0,300) +
+  labs(fill = "Survived")
+
+#==========================================================
+
+#Exploratory Modeling
+
+#==========================================================
+
+library(randomForest)
+
+#Train a Random Forest with the default parameters using Pclass & Title
+rf.train.1 <- data.combined[1:891, c("Pclass", "title")]
+rf.label <- as.factor(train$Survived)
+
+set.seed(1234)
+rf.1 <- randomForest(x = rf.train.1, y = rf.label, importance = TRUE, ntree = 1000)
+rf.1
+varImpPlot(rf.1)
+
+
+#Train a Random Forest with default parameters using Pclass, title & SibSp
+rf.train.2 <- data.combined[1:891, c("Pclass", "title", "SibSp")]
+
+set.seed(1234)
+rf.2 <- randomForest(x = rf.train.2, y = rf.label, importance = TRUE, ntree = 1000)
+rf.2
+varImpPlot(rf.2)
+
+#Train a Random Forest with default parameters using Pclass, title & Parch
+rf.train.3 <- data.combined[1:891, c("Pclass", "title", "Parch")]
+
+set.seed(1234)
+rf.3 <- randomForest(x = rf.train.3, y = rf.label, importance = TRUE, ntree = 1000)
+rf.3
+varImpPlot(rf.3)
+
+#Train a Random Forest with default parameters using Pclass, title & Parch with SibSp
+rf.train.4 <- data.combined[1:891, c("Pclass", "title", "SibSp" ,"Parch")]
+
+set.seed(1234)
+rf.4 <- randomForest(x = rf.train.4, y = rf.label, importance = TRUE, ntree = 1000)
+rf.4
+varImpPlot(rf.4)
+
